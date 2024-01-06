@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Threading;
 
 namespace EscapeFromTheWoods
 {
@@ -9,17 +7,20 @@ namespace EscapeFromTheWoods
         private static int treeID = 0;
         private static int woodID = 0;
         private static int monkeyID = 0;
+
         public static int GetTreeID()
         {
-            return treeID++;
+            return Interlocked.Increment(ref treeID);
         }
+
         public static int GetMonkeyID()
         {
-            return monkeyID++;
+            return Interlocked.Increment(ref monkeyID);
         }
+
         public static int GetWoodID()
         {
-            return woodID++;
+            return Interlocked.Increment(ref woodID);
         }
     }
 }
