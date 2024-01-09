@@ -1,5 +1,6 @@
 ﻿using EscapeFromTheWoods;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -15,36 +16,38 @@ class Program
 
         Map m1 = new Map(0, 500, 0, 500);
         Wood w1 = WoodBuilder.GetWood(500, m1, path, db);
-        await w1.PlaceMonkeyAsync("Alice", IDgenerator.GetMonkeyID());
-        await w1.PlaceMonkeyAsync("Janice", IDgenerator.GetMonkeyID());
-        await w1.PlaceMonkeyAsync("Toby", IDgenerator.GetMonkeyID());
-        await w1.PlaceMonkeyAsync("Mindy", IDgenerator.GetMonkeyID());
-        await w1.PlaceMonkeyAsync("Jos", IDgenerator.GetMonkeyID());
 
         Map m2 = new Map(0, 200, 0, 400);
         Wood w2 = WoodBuilder.GetWood(2500, m2, path, db);
-        await w2.PlaceMonkeyAsync("Tom", IDgenerator.GetMonkeyID());
-        await w2.PlaceMonkeyAsync("Jerry", IDgenerator.GetMonkeyID());
-        await w2.PlaceMonkeyAsync("Tiffany", IDgenerator.GetMonkeyID());
-        await w2.PlaceMonkeyAsync("Mozes", IDgenerator.GetMonkeyID());
-        await w2.PlaceMonkeyAsync("Jebus", IDgenerator.GetMonkeyID());
 
         Map m3 = new Map(0, 400, 0, 400);
         Wood w3 = WoodBuilder.GetWood(2000, m3, path, db);
-        await w3.PlaceMonkeyAsync("Kelly", IDgenerator.GetMonkeyID());
-        await w3.PlaceMonkeyAsync("Kenji", IDgenerator.GetMonkeyID());
-        await w3.PlaceMonkeyAsync("Kobe", IDgenerator.GetMonkeyID());
-        await w3.PlaceMonkeyAsync("Kendra", IDgenerator.GetMonkeyID());
 
-        await w1.WriteWoodToDBAsync();
-        await w2.WriteWoodToDBAsync();
-        await w3.WriteWoodToDBAsync();
-        await w1.EscapeAsync();
-        await w2.EscapeAsync();
-        await w3.EscapeAsync();
+        var placementTasks = new List<Task>
+            {
+        PlaceMonkeysInWood(w1, new string[] { "Alice", "Janice", "Toby", "Mindy", "Jos" }),
+        PlaceMonkeysInWood(w2, new string[] { "Tom", "Jerry", "Tiffany", "Mozes", "Jebus" }),
+        PlaceMonkeysInWood(w3, new string[] { "Kelly", "Kenji", "Kobe", "Kendra" })
+             };
+        await Task.WhenAll(placementTasks);
+
+        // Write to DB
+        var dbTasks = new Task[] { w1.WriteWoodToDBAsync(), w2.WriteWoodToDBAsync(), w3.WriteWoodToDBAsync() };
+        await Task.WhenAll(dbTasks);
+
+        // Escape at the same time
+        var escapeTasks = new Task[] { w1.EscapeAsync(), w2.EscapeAsync(), w3.EscapeAsync() };
+        await Task.WhenAll(escapeTasks);
 
         stopwatch.Stop();
         Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
         Console.WriteLine("end");
+    }
+    static async Task PlaceMonkeysInWood(Wood wood, IEnumerable<string> monkeyNames)
+    {
+        foreach(var name in monkeyNames)
+        {
+            await wood.PlaceMonkeyAsync(name, IDgenerator.GetMonkeyID());
+        }
     }
 }
