@@ -18,10 +18,10 @@ namespace EscapeFromTheWoods
         private Random random = new(1);
         public int woodID { get; private set; }
         private Map map;
-        private Dictionary<int, Tree> trees;
+        private List<Tree> trees;
         private ConcurrentDictionary<int, Monkey> monkeys;
 
-        public Wood(int woodID, Dictionary<int, Tree> trees, Map map, string path, DBwriter db)
+        public Wood(int woodID, List<Tree> trees, Map map, string path, DBwriter db)
         {
             this.woodID = woodID;
             this.trees = trees;
@@ -32,33 +32,19 @@ namespace EscapeFromTheWoods
         }
 
         // Place monkey
-        public Task PlaceMonkeyAsync(string monkeyName, int monkeyID)
+        public void PlaceMonkeyAsync(string monkeyName, int monkeyID)
         {
-            return Task.Run(() =>
+
+            int treeNr;
+            do
             {
-                Tree selectedTree = null;
-                int treeCount = 0;
+                treeNr = random.Next(0, trees.Count - 1);
+            }
+            while(trees[treeNr].hasMonkey);
+            Monkey m = new(monkeyID, monkeyName, trees[treeNr]);
+            monkeys.TryAdd(m.monkeyID, m);
+            trees[treeNr].hasMonkey = true;
 
-                foreach(var tree in trees.Values)
-                {
-                    if(!tree.hasMonkey)
-                    {
-                        if(random.Next(treeCount++) == 0)
-                        {
-                            selectedTree = tree;
-                        }
-                    }
-                }
-
-                if(selectedTree == null)
-                {
-                    throw new InvalidOperationException("No available trees to place a monkey.");
-                }
-
-                Monkey m = new(monkeyID, monkeyName, selectedTree);
-                monkeys.TryAdd(monkeyID, m);
-                selectedTree.hasMonkey = true;
-            });
         }
 
         // Monkey escape async
@@ -116,7 +102,7 @@ namespace EscapeFromTheWoods
         {
             using(Pen p = new(Color.Green, 1))
             {
-                foreach(Tree t in trees.Values)
+                foreach(Tree t in trees)
                 {
                     int x = t.x * drawingFactor;
                     int y = t.y * drawingFactor;
@@ -171,7 +157,7 @@ namespace EscapeFromTheWoods
 
             HashSet<int> visited = new() { monkey.tree.treeID };
             List<Tree> route = new() { monkey.tree };
-            var candidateTrees = new HashSet<Tree>(trees.Values.Where(t => !t.hasMonkey));
+            var candidateTrees = new HashSet<Tree>(trees.Where(t => !t.hasMonkey));
 
             while(true)
             {
@@ -216,7 +202,7 @@ namespace EscapeFromTheWoods
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"{woodID}:write db wood {woodID} start");
-            List<DBWoodRecord> records = trees.Values.Select(t =>
+            List<DBWoodRecord> records = trees.Select(t =>
                 new DBWoodRecord(woodID, t.treeID, t.x, t.y)).ToList();
             GameWoodRecord gwr = new(records);
             await db.WriteWoodRecords(gwr);

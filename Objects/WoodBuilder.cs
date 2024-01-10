@@ -7,14 +7,16 @@ namespace EscapeFromTheWoods
     {
         public static Wood GetWood(int size, Map map, string path, DBwriter db)
         {
-            Random r = new Random(100);
-            Dictionary<int, Tree> trees = new Dictionary<int, Tree>();
+            Random r = new(100);
+            List<Tree> trees = new();
+
             while(trees.Count < size)
             {
-                Tree t = new Tree(IDgenerator.GetTreeID(), r.Next(map.xmin, map.xmax), r.Next(map.ymin, map.ymax));
-                trees.TryAdd(t.treeID, t);
+                Tree t = new(IDgenerator.GetTreeID(), r.Next(map.xmin, map.xmax), r.Next(map.ymin, map.ymax));
+                trees.Add(t);
             }
-            Wood w = new Wood(IDgenerator.GetWoodID(), trees, map, path, db);
+
+            Wood w = new(IDgenerator.GetWoodID(), trees, map, path, db);
             return w;
         }
     }

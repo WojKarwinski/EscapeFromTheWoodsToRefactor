@@ -53,12 +53,11 @@ class Program
 
     static async Task PlaceMonkeysInWood(Wood wood, IEnumerable<string> monkeyNames)
     {
-        var tasks = new List<Task>();
+
         foreach(var name in monkeyNames)
         {
             int monkeyID = IDgenerator.GetMonkeyID();
-            tasks.Add(wood.PlaceMonkeyAsync(name, monkeyID));
+            wood.PlaceMonkeyAsync(name, monkeyID);
         }
-        await Task.WhenAll(tasks);
     }
 }
