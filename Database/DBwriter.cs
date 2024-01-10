@@ -1,7 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using EscapeFromTheWoods.Objects;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace EscapeFromTheWoods
@@ -17,61 +15,17 @@ namespace EscapeFromTheWoods
             database = client.GetDatabase("EscapeFromTheWoodsDB");
         }
 
-        public async Task WriteWoodRecords(List<DBWoodRecord> data)
+        public async Task WriteWoodRecords(GameWoodRecord data)
         {
-            var collection = database.GetCollection<BsonDocument>("WoodRecords");
-            var documents = new List<BsonDocument>();
+            var collection = database.GetCollection<GameWoodRecord>("WoodRecords");
 
-            foreach(var x in data)
-            {
-                var document = new BsonDocument
-            {
-                { "woodID", x.woodID },
-                { "treeID", x.treeID },
-                { "x", x.x },
-                { "y", x.y }
-            };
-                documents.Add(document);
-            }
-
-            try
-            {
-                await collection.InsertManyAsync(documents);
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            await collection.InsertOneAsync(data);
         }
 
-        public async Task WriteMonkeyRecords(List<DBMonkeyRecord> data)
+        public async Task WriteMonkeyRecords(GameMonkeyRecord data)
         {
-            var collection = database.GetCollection<BsonDocument>("MonkeyRecords");
-            var documents = new List<BsonDocument>();
-
-            foreach(var x in data)
-            {
-                var document = new BsonDocument
-            {
-                { "monkeyID", x.monkeyID },
-                { "monkeyName", x.monkeyName },
-                { "woodID", x.woodID },
-                { "seqNr", x.seqNr },
-                { "treeID", x.treeID },
-                { "x", x.x },
-                { "y", x.y }
-            };
-                documents.Add(document);
-            }
-
-            try
-            {
-                await collection.InsertManyAsync(documents);
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            var collection = database.GetCollection<GameMonkeyRecord>("MonkeyRecords");
+            await collection.InsertOneAsync(data);
         }
     }
 }

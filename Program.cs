@@ -8,46 +8,57 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Stopwatch stopwatch = new Stopwatch();
+        Stopwatch stopwatch = new();
         stopwatch.Start();
         string connectionString = @"mongodb://localhost:27017";
-        DBwriter db = new DBwriter(connectionString);
-        string path = @"D:\School 2023-2024\EscapeFromTheWoodsToRefactor\EscapeFromTheWoodsToRefactor\monkeys";
+        DBwriter db = new(connectionString);
+        string path = @"C:\School 2023-2024\Programmeren Specialisatie\EscapeFromTheWoodsToRefactor\monkeys";
 
-        Map m1 = new Map(0, 500, 0, 500);
-        Wood w1 = WoodBuilder.GetWood(500, m1, path, db);
+        Task t1 = Task.Run(async () =>
+        {
+            Map m1 = new(0, 500, 0, 500);
+            Wood w1 = WoodBuilder.GetWood(30000, m1, path, db);
+            PlaceMonkeysInWood(w1, new string[] { "Alice", "Janice", "Toby", "Mindy", "Jos" });
+            await Console.Out.WriteLineAsync("GAME 1 START");
+            await w1.WriteWoodToDBAsync();
+            await w1.EscapeAsync();
+        });
 
-        Map m2 = new Map(0, 200, 0, 400);
-        Wood w2 = WoodBuilder.GetWood(2500, m2, path, db);
+        Task t2 = Task.Run(async () =>
+        {
+            Map m2 = new(0, 200, 0, 400);
+            Wood w2 = WoodBuilder.GetWood(20000, m2, path, db);
+            PlaceMonkeysInWood(w2, new string[] { "Tom", "Jerry", "Tiffany", "Mozes", "Jebus" });
+            await Console.Out.WriteLineAsync("GAME 2 START");
+            await w2.WriteWoodToDBAsync();
+            await w2.EscapeAsync();
+        });
 
-        Map m3 = new Map(0, 400, 0, 400);
-        Wood w3 = WoodBuilder.GetWood(2000, m3, path, db);
+        Task t3 = Task.Run(async () =>
+        {
+            Map m3 = new(0, 400, 0, 400);
+            Wood w3 = WoodBuilder.GetWood(10000, m3, path, db);
+            PlaceMonkeysInWood(w3, new string[] { "Kelly", "Kenji", "Kobe", "Kendra" });
+            await Console.Out.WriteLineAsync("GAME 3 START");
+            await w3.WriteWoodToDBAsync();
+            await w3.EscapeAsync();
+        });
 
-        var placementTasks = new List<Task>
-            {
-        PlaceMonkeysInWood(w1, new string[] { "Alice", "Janice", "Toby", "Mindy", "Jos" }),
-        PlaceMonkeysInWood(w2, new string[] { "Tom", "Jerry", "Tiffany", "Mozes", "Jebus" }),
-        PlaceMonkeysInWood(w3, new string[] { "Kelly", "Kenji", "Kobe", "Kendra" })
-             };
-        await Task.WhenAll(placementTasks);
-
-        // Write to DB
-        var dbTasks = new Task[] { w1.WriteWoodToDBAsync(), w2.WriteWoodToDBAsync(), w3.WriteWoodToDBAsync() };
-        await Task.WhenAll(dbTasks);
-
-        // Escape at the same time
-        var escapeTasks = new Task[] { w1.EscapeAsync(), w2.EscapeAsync(), w3.EscapeAsync() };
-        await Task.WhenAll(escapeTasks);
+        await Task.WhenAll(t1, t2, t3);
 
         stopwatch.Stop();
         Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
         Console.WriteLine("end");
     }
+
     static async Task PlaceMonkeysInWood(Wood wood, IEnumerable<string> monkeyNames)
     {
+        var tasks = new List<Task>();
         foreach(var name in monkeyNames)
         {
-            await wood.PlaceMonkeyAsync(name, IDgenerator.GetMonkeyID());
+            int monkeyID = IDgenerator.GetMonkeyID();
+            tasks.Add(wood.PlaceMonkeyAsync(name, monkeyID));
         }
+        await Task.WhenAll(tasks);
     }
 }

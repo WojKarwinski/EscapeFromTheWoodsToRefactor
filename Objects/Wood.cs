@@ -1,4 +1,6 @@
-﻿using System;
+﻿using EscapeFromTheWoods.Objects;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -13,52 +15,50 @@ namespace EscapeFromTheWoods
         private const int drawingFactor = 8;
         private string path;
         private DBwriter db;
-        private Random r = new Random(1);
+        private Random random = new(1);
         public int woodID { get; private set; }
         private Map map;
         private Dictionary<int, Tree> trees;
-        private Dictionary<int, Monkey> monkeys;
+        private ConcurrentDictionary<int, Monkey> monkeys;
 
         public Wood(int woodID, Dictionary<int, Tree> trees, Map map, string path, DBwriter db)
         {
             this.woodID = woodID;
             this.trees = trees;
-            this.monkeys = new Dictionary<int, Monkey>();
+            this.monkeys = new ConcurrentDictionary<int, Monkey>();
             this.map = map;
             this.path = path;
             this.db = db;
         }
 
-        // Place monkey asynchronously
+        // Place monkey
         public Task PlaceMonkeyAsync(string monkeyName, int monkeyID)
         {
-            Tree selectedTree = null;
-            int treeCount = 0;
-
-            foreach(var tree in trees.Values)
+            return Task.Run(() =>
             {
-                if(!tree.hasMonkey)
+                Tree selectedTree = null;
+                int treeCount = 0;
+
+                foreach(var tree in trees.Values)
                 {
-                    if(r.Next(++treeCount) == 0)
+                    if(!tree.hasMonkey)
                     {
-                        selectedTree = tree;
+                        if(random.Next(treeCount++) == 0)
+                        {
+                            selectedTree = tree;
+                        }
                     }
                 }
-            }
 
-            if(selectedTree == null)
-            {
-                throw new InvalidOperationException("No available trees to place a monkey.");
-            }
+                if(selectedTree == null)
+                {
+                    throw new InvalidOperationException("No available trees to place a monkey.");
+                }
 
-            Monkey m = new Monkey(monkeyID, monkeyName, selectedTree);
-            lock(monkeys) // one thread at a time
-            {
-                monkeys.Add(monkeyID, m);
-            }
-            selectedTree.hasMonkey = true;
-
-            return Task.CompletedTask;
+                Monkey m = new(monkeyID, monkeyName, selectedTree);
+                monkeys.TryAdd(monkeyID, m);
+                selectedTree.hasMonkey = true;
+            });
         }
 
         // Monkey escape async
@@ -72,12 +72,14 @@ namespace EscapeFromTheWoods
         // Write route to database
         private async Task WriteRouteToDBAsync(Monkey monkey, List<Tree> route)
         {
-            List<DBMonkeyRecord> records = new List<DBMonkeyRecord>();
+            List<DBMonkeyRecord> records = new();
             for(int j = 0; j < route.Count; j++)
             {
                 records.Add(new DBMonkeyRecord(monkey.monkeyID, monkey.name, woodID, j, route[j].treeID, route[j].x, route[j].y));
             }
-            await db.WriteMonkeyRecords(records);
+            GameMonkeyRecord gmr = new(records);
+
+            await db.WriteMonkeyRecords(gmr);
         }
 
         // Write escape routes to bitmap
@@ -112,7 +114,7 @@ namespace EscapeFromTheWoods
 
         private void DrawTrees(Graphics g)
         {
-            using(Pen p = new Pen(Color.Green, 1))
+            using(Pen p = new(Color.Green, 1))
             {
                 foreach(Tree t in trees.Values)
                 {
@@ -138,7 +140,7 @@ namespace EscapeFromTheWoods
         private void DrawSingleRoute(Graphics g, List<Tree> route, Color color)
         {
             int delta = drawingFactor / 2;
-            using(Pen pen = new Pen(color, 1))
+            using(Pen pen = new(color, 1))
             {
                 int p1x = route[0].x * drawingFactor + delta;
                 int p1y = route[0].y * drawingFactor + delta;
@@ -167,19 +169,23 @@ namespace EscapeFromTheWoods
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"{woodID}:start {woodID},{monkey.name}");
 
-            HashSet<int> visited = new HashSet<int> { monkey.tree.treeID };
-            List<Tree> route = new List<Tree>() { monkey.tree };
+            HashSet<int> visited = new() { monkey.tree.treeID };
+            List<Tree> route = new() { monkey.tree };
             var candidateTrees = new HashSet<Tree>(trees.Values.Where(t => !t.hasMonkey));
 
             while(true)
             {
-                double distanceToBorder = DistanceToBorder(monkey.tree);
+                // Directly calculate distance to border
+                double distanceToBorder = Math.Min(Math.Min(monkey.tree.x - map.xmin, map.xmax - monkey.tree.x),
+                                                   Math.Min(monkey.tree.y - map.ymin, map.ymax - monkey.tree.y));
                 Tree closestTree = null;
                 double minDistance = double.MaxValue;
 
                 foreach(var t in candidateTrees)
                 {
-                    double distance = Distance(monkey.tree, t);
+                    // Directly calculate distance between two trees
+                    double distance = Math.Sqrt(Math.Pow(monkey.tree.x - t.x, 2) + Math.Pow(monkey.tree.y - t.y, 2));
+
                     if(distance < minDistance)
                     {
                         minDistance = distance;
@@ -205,7 +211,6 @@ namespace EscapeFromTheWoods
             }
         }
 
-
         // Writes wood data to database
         public async Task WriteWoodToDBAsync()
         {
@@ -213,8 +218,8 @@ namespace EscapeFromTheWoods
             Console.WriteLine($"{woodID}:write db wood {woodID} start");
             List<DBWoodRecord> records = trees.Values.Select(t =>
                 new DBWoodRecord(woodID, t.treeID, t.x, t.y)).ToList();
-
-            await db.WriteWoodRecords(records);
+            GameWoodRecord gwr = new(records);
+            await db.WriteWoodRecords(gwr);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"{woodID}:write db wood {woodID} end");
         }
