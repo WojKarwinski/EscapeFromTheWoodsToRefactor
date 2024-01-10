@@ -169,7 +169,7 @@ namespace EscapeFromTheWoods
 
                 foreach(var t in candidateTrees)
                 {
-                    // Directly calculate distance between two trees
+                    // Ddistance between two trees
                     double distance = Math.Sqrt(Math.Pow(monkey.tree.x - t.x, 2) + Math.Pow(monkey.tree.y - t.y, 2));
 
                     if(distance < minDistance)
